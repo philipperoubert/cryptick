@@ -12,11 +12,11 @@ This project is ideal for crypto enthusiasts looking for a compact, always-on da
 
 Key Features:
 
-✅ Low-power consumption – Runs for a week on a single charge\
-✅ E-paper display – Always visible, even without backlight\
-✅ Auto-refresh – Updates price data every 30 minutes\
-✅ DIY-friendly – Simple to assemble and customize\
-✅ Wi-Fi enabled – Fetches real-time data via Coingecko API
+🔋 Low-power consumption – Runs for a week on a single charge\
+💻 E-paper display – Always visible, even without backlight\
+🔃 Auto-refresh – Updates price data every 30 minutes\
+🔨 DIY-friendly – Simple to assemble and customize\
+📶 Wi-Fi enabled – Fetches real-time data via Coingecko API
 
 ## Parts
 
@@ -61,7 +61,7 @@ Key Features:
 
 1. Get a Coingecko API key 
 	1. Head over to [Coingecko](https://www.coingecko.com/en/api/pricing) and click on "Create Free Account" (or choose for a paid subscription, up to you!)
-	2. Once your account created, head over to the [Developer Dashboard](https://www.coingecko.com/en/developers/dashboard)
+	2. Once your account is created, head over to the [Developer Dashboard](https://www.coingecko.com/en/developers/dashboard)
 	3. Click on "+ Add New Key", and make note of the API Key (you will need it for later!)
 2. After installing Cryptick onto your device, your device should be on the set up page, if not, press on the right-most button (make sure your device is plugged in).
 3. Follow the instructions on the screen
@@ -77,16 +77,16 @@ A: Prices automatically update every 30 mins. Unfortunately, more frequent updat
 
 **Q: What does the button do?**
 
-A: Pressing the main button (`REST`) will wake up the device and refresh the prices, it make take a minute to do so.
+A: Pressing the main button (`REST`) will wake up the device and refresh the prices, it may take a minute to do so.
 
  **Q: I want to reset my device and set it up fresh again, how can I do this?**
  
  A: To factory reset the device:
-	- Take the device out of its case (if you have a case)
-	- Press the `SENS0P_VN` (3rd) button
-	- While you are pressing the 3rd button, press and release the `REST` (1st) button
-	- Keep pressing the 3rd button, after around 3 seconds, the screen should show the `Cryptick` welcome screen. You can now release the button. The device will turn off.
-	- If you want to start the setup screen, simply press the 1st button, instructions should show up on the screen.
+- Take the device out of its case (if you have a case)
+- Press the `SENS0P_VN` (3rd) button
+- While you are pressing the 3rd button, press and release the `REST` (1st) button
+- Keep pressing the 3rd button, after around 3 seconds, the screen should show the `Cryptick` welcome screen. You can now release the button. The device will turn off.
+- If you want to start the setup screen, simply press the 1st button, instructions should show up on the screen.
 
 **Q: What happens if internet goes down?**
 
@@ -101,11 +101,11 @@ A: The battery life should last for at least a week. Once depleted, you can char
 **Q: VS Code tells me my device is not available, but I have connected it to my PC?**
 
 A: If the device is in deep sleep mode, the port won't be connected and as such uploading the program will not work. To ensure that the device is on and ready to be flashed, follow these steps:
-	- Take the device out of its case (if you have a case)
-	- Press the `STR_I00` (2nd) button
-	- While you are pressing the 2nd button, press and release the `REST` (1st) button
-	- Release the 2nd button. Your device should now be on and in stand-by mode, ready to be flashed.
-	- If you want to get out of this mode, press the 1st button.
+- Take the device out of its case (if you have a case)
+- Press the `STR_I00` (2nd) button
+- While you are pressing the 2nd button, press and release the `REST` (1st) button
+- Release the 2nd button. Your device should now be on and in stand-by mode, ready to be flashed.
+- If you want to get out of this mode, press the 1st button.
 
 ## Contributions
 
@@ -113,7 +113,7 @@ Contributions and ideas are most welcome! Feel free to open issues and pull-requ
 
 ## Special Thanks
 
-Special thanks to [techiesms](https://www.youtube.com/watch?v=g-UckNaSy0Y) from whom this project is inspired from. The github project can be found [here](https://github.com/techiesms/Crypto-Currency-Display-usign-ESP32---Epaper-display).
+Special thanks to [techiesms](https://www.youtube.com/watch?v=g-UckNaSy0Y) from whom this project is inspired. The github project can be found [here](https://github.com/techiesms/Crypto-Currency-Display-usign-ESP32---Epaper-display).
 
 ## License
 
