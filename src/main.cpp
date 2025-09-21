@@ -9,6 +9,7 @@
 #include "line_plotting.h"
 #include "roboto.h"
 #include "cryptick.h"
+#include "config.h"
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include <esp_task_wdt.h>
@@ -18,6 +19,73 @@ uint8_t *framebuffer = NULL;
 
 const long gmtOffset_sec = 0;
 const int daylightOffset_sec = 3600;
+
+void loadConfigIfEnabled() {
+#if ENABLE_CONFIG_MODE
+  Preferences preferences;
+
+  // Check if config mode has been disabled from the device
+  preferences.begin("system", false);
+  bool configDisabled = preferences.getBool("config_disabled", false);
+  preferences.end();
+
+  if (configDisabled) {
+    Serial.println("Config mode disabled by user - skipping hardcoded configuration");
+    return;
+  }
+
+  Serial.println("Loading hardcoded configuration...");
+
+  // Set WiFi credentials in "wifi" namespace
+  preferences.begin("wifi", false);
+  preferences.putString("ssid", CONFIG_WIFI_SSID);
+  preferences.putString("password", CONFIG_WIFI_PASSWORD);
+  preferences.end();
+
+  // Set crypto credentials in "CryptoCreds" namespace
+  preferences.begin("CryptoCreds", false);
+  preferences.putString("api_key", CONFIG_API_KEY);
+  preferences.putString("currency", CONFIG_CURRENCY);
+
+  // Set cryptocurrencies
+  String cryptos[] = {CONFIG_CRYPTO_1, CONFIG_CRYPTO_2, CONFIG_CRYPTO_3, CONFIG_CRYPTO_4, CONFIG_CRYPTO_5};
+  for (int i = 0; i < 5; i++) {
+    String key = "crypto" + String(i + 1);
+    preferences.putString(key.c_str(), cryptos[i]);
+  }
+  preferences.end();
+
+  // Mark that config has been loaded once
+  preferences.begin("system", false);
+  preferences.putBool("config_disabled", true);
+  preferences.end();
+
+  Serial.println("Configuration loaded successfully! Config mode now disabled.");
+#endif
+}
+
+void clearAllCredentials() {
+  Serial.println("Clearing all saved credentials and resetting config mode...");
+
+  Preferences preferences;
+
+  // Clear WiFi credentials
+  preferences.begin("wifi", false);
+  preferences.clear();
+  preferences.end();
+
+  // Clear crypto credentials
+  preferences.begin("CryptoCreds", false);
+  preferences.clear();
+  preferences.end();
+
+  // Reset config mode flag so it can run again
+  preferences.begin("system", false);
+  preferences.remove("config_disabled");
+  preferences.end();
+
+  Serial.println("All credentials cleared. Config mode re-enabled. Device reset to factory defaults.");
+}
 #define BUTTON_3 21
 #define BATT_PIN 14
 int vref = 1100;
@@ -51,6 +119,9 @@ void setup()
   pinMode(BUTTON_3, INPUT_PULLUP);
   Serial.begin(115200);
 
+  // Load configuration if enabled
+  loadConfigIfEnabled();
+
   unsigned long buttonPressStartTime = 0;
   bool buttonPressed = false;
 
@@ -69,8 +140,8 @@ void setup()
       {
         if (millis() - buttonPressStartTime >= 3000)
         {
-          // Button has been pressed for 3 seconds, clear saved WiFi credentials
-          clearSavedWiFiCredentials();
+          // Button has been pressed for 3 seconds, clear all credentials
+          clearAllCredentials();
           epd_init();
           epd_poweron();
           epd_clear();
