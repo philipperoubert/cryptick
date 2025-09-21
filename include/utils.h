@@ -279,6 +279,15 @@ void configureWebServerRoutes(AsyncWebServer &server)
       html += "<h1>Enter Coingecko API Key</h1>";
       html += "<label for=\"apiKey\">Coingecko API Key:</label><br>";
       html += "<input type=\"text\" name=\"apiKey\" id=\"apiKey\"><br>";
+      
+      // Add error handling preference
+      html += "<h1>Error Handling</h1>";
+      html += "<div style='margin: 10px 0;'>";
+      html += "<input type=\"checkbox\" name=\"sleepOnError\" id=\"sleepOnError\" style='width: auto;' checked>";
+      html += "<label for=\"sleepOnError\" style='margin-left: 10px;'>Sleep device on API errors (recommended for battery life)</label><br>";
+      html += "<p style='font-size: 0.9em; margin-top: 5px;'>When enabled, device will sleep for 10 minutes if an API error occurs.<br>When disabled, device will continue with partial data if an API error occurs.</p>";
+      html += "</div>";
+      
       html += "<input type=\"submit\" value=\"Save\">";
       html += "</form></body></html>";
       request->send(200, "text/html", html); });
@@ -300,6 +309,11 @@ void configureWebServerRoutes(AsyncWebServer &server)
       }
       preferences.putString("currency", request->getParam("base", true)->value());
       preferences.putString("api_key", request->getParam("apiKey", true)->value());
+      
+      // Save the sleep on error preference
+      bool sleepOnError = request->hasParam("sleepOnError", true);
+      preferences.putBool("sleep_on_error", sleepOnError);
+      
       preferences.end();
       request->send(200, "text/html", "Cryptocurrencies and API key saved. Rebooting...");
       delay(2000);

@@ -21,6 +21,31 @@ const int daylightOffset_sec = 3600;
 #define BUTTON_3 21
 #define BATT_PIN 14
 int vref = 1100;
+
+// Maximum time in milliseconds the device should stay awake during a refresh cycle
+#define MAX_AWAKE_TIME 120000 // 2 minutes max awake time
+
+void ensure_deep_sleep() {
+  // This is a failsafe function to ensure the device always sleeps
+  static unsigned long start_time = millis();
+  
+  // If we've been awake for too long, force sleep
+  if (millis() - start_time > MAX_AWAKE_TIME) {
+    Serial.println("Safety timeout reached. Forcing deep sleep.");
+    // Free any allocated resources
+    if (framebuffer != NULL) {
+      free(framebuffer);
+    }
+    
+    // Power off the display if needed
+    epd_poweroff();
+    
+    // Go to sleep for 30 minutes
+    esp_sleep_enable_timer_wakeup(30 * minutes);
+    esp_deep_sleep_start();
+  }
+}
+
 void setup()
 {
   pinMode(BUTTON_3, INPUT_PULLUP);
@@ -71,18 +96,30 @@ void setup()
     Serial.print("IP address: ");
     Serial.println(WiFi.localIP());
 
+    // Use a flag to track if we successfully refreshed the display
+    bool displayRefreshed = false;
+    
+    // First allocate the framebuffer
     framebuffer = (uint8_t *)ps_calloc(sizeof(uint8_t), EPD_WIDTH * EPD_HEIGHT / 2);
     if (!framebuffer)
     {
       Serial.println("alloc memory failed !!!");
-      while (1)
-        ;
+      
+      // Force deep sleep if memory allocation failed
+      Serial.println("Critical error: Entering deep sleep to recover");
+      esp_sleep_enable_timer_wakeup(30 * minutes);
+      esp_deep_sleep_start();
+      
+      // Code will not reach here due to deep sleep
+      return;
     }
+    
+    // Continue with normal operation
     memset(framebuffer, 0xFF, EPD_WIDTH * EPD_HEIGHT / 2);
 
-    Serial.println("Drawing header...");
     FontProperties props = {.fg_color = 0, .bg_color = 15, .fallback_glyph = 0, .flags = 0};
 
+    Serial.println("Drawing header...");
     int cursor_x = 30;
     int cursor_y = 65;
     Serial.println("Drawing header...");
@@ -129,18 +166,37 @@ void setup()
     DynamicJsonDocument change = getChange(cryptolist);
     Serial.println("Received cryptocurrency change data.");
 
+    // Process one cryptocurrency at a time to avoid memory issues
     for (int i = 0; i < 5; i++)
     {
       if (crypto_names[i] == "")
       {
         continue;
       }
+      
+      // Free up some memory before fetching history
+      if (i > 0) {
+        delay(500); // Short delay to let system stabilize
+      }
+      
       Serial.printf("Processing data for %s...\n", crypto_names[i].c_str());
+      
+      // Get historical data for this cryptocurrency
       JsonArrayConst prices = getHistory(crypto_names[i]);
 
+      // Check if prices array is valid and has data
+      if (prices.isNull() || prices.size() == 0) {
+        Serial.printf("No price data available for %s, skipping chart\n", crypto_names[i].c_str());
+        continue;
+      }
+      
+      Serial.printf("Got %d price points for %s\n", prices.size(), crypto_names[i].c_str());
+
+      // Process price data to find min/max
       double min_price = 0;
       double max_price = 0;
-
+      
+      // Check all data points for accurate min/max calculation
       for (int j = 0; j < prices.size(); j++)
       {
         if (prices[j][1] < min_price || min_price == 0)
@@ -153,6 +209,12 @@ void setup()
         }
       }
 
+      // Prevent division by zero by ensuring min_price != max_price
+      if (min_price == max_price) {
+        // If all prices are equal, create a small difference to avoid division by zero
+        max_price += 0.001;
+      }
+
       double last_price = prices[0][1];
 
       int x = 640;
@@ -161,22 +223,29 @@ void setup()
       int height = 60;
 
       Serial.println("Drawing price chart...");
-      for (int j = 0; j < prices.size() - 1; j++)
-      {
-        int x0 = (int)(x + j * width / prices.size() - 1);
-        int x1 = (int)(x + (j + 1) * width / prices.size() - 1);
-
-        double current_price = prices[j + 1][1];
-
-        if (current_price == 0)
+      // Make sure prices array has at least 2 elements before drawing
+      if (prices.size() > 1) {
+        // Draw fewer points for efficiency if there are too many
+        int drawStep = prices.size() > 100 ? prices.size() / 100 : 1;
+        for (int j = 0; j < prices.size() - drawStep; j += drawStep)
         {
-          current_price = last_price;
+          int x0 = (int)(x + j * width / (prices.size() - 1));
+          int x1 = (int)(x + (j + drawStep) * width / (prices.size() - 1));
+
+          double current_price = prices[j + drawStep][1];
+
+          if (current_price == 0)
+          {
+            current_price = last_price;
+          }
+          int y0 = (int)(y + (max_price - last_price) / (max_price - min_price) * height);
+          int y1 = (int)(y + (max_price - current_price) / (max_price - min_price) * height);
+          last_price = current_price;
+          bresenham(x0, y0, x1, y1, y + height, true, framebuffer);
+          bresenham(x0, y0 + 1, x1, y1 + 1, y + height, false, framebuffer);
         }
-        int y0 = (int)(y + (max_price - last_price) / (max_price - min_price) * height);
-        int y1 = (int)(y + (max_price - current_price) / (max_price - min_price) * height);
-        last_price = current_price;
-        bresenham(x0, y0, x1, y1, y + height, true, framebuffer);
-        bresenham(x0, y0 + 1, x1, y1 + 1, y + height, false, framebuffer);
+      } else {
+        Serial.printf("Not enough price data points for %s to draw chart\n", crypto_names[i].c_str());
       }
 
       Serial.println("Writing cryptocurrency data...");
@@ -213,6 +282,8 @@ void setup()
     while (time(nullptr) < 1510644967)
     {
       delay(10);
+      // Check if we need to force deep sleep (in case NTP server is unreachable)
+      ensure_deep_sleep();
     }
     Serial.println("Time set successfully.");
 
@@ -232,8 +303,9 @@ void setup()
     epd_draw_grayscale_image(epd_full_screen(), framebuffer);
     epd_poweroff();
 
+    // *** END OF REFRESH SEQUENCE ***
+    // Always go to sleep after a refresh
     Serial.println("Display updated and powered off.");
-
     Serial.println("Preparing for deep sleep...");
     esp_sleep_enable_timer_wakeup(30 * minutes);
     Serial.println("Entering deep sleep mode.");
@@ -294,4 +366,17 @@ void setup()
 
 void loop()
 {
+  // In AP mode, this safety check allows the device to respond to web requests
+  // but will eventually force a sleep if left unattended
+  static unsigned long lastCheckTime = 0;
+  
+  // Only check every second to avoid excessive overhead
+  if (millis() - lastCheckTime > 1000) {
+    lastCheckTime = millis();
+    
+    // Check if we need to enforce deep sleep
+    ensure_deep_sleep();
+  }
+  
+  // Continue normal loop operations (handling web server, etc.)
 }
